@@ -347,7 +347,7 @@ const closeDeleteBudgetModal = () => {
 
 const handleBudgetModalChange = (value: boolean) => {
   if (!value) {
-    closeBudgetModal()w
+    closeBudgetModal()
   }
 }
 
