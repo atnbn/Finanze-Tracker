@@ -67,9 +67,8 @@ import TransactionList from '../components/parts/transactionList.vue'
 import TransactionsChart from '../components/parts/TransactionsChart.vue'
 import Sidebar from '@/components/parts/sidebar.vue'
 import Header from '@/components/parts/header.vue'
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
 import { formatCurrencyAmount } from '@/utils/appPreferences'
-
-const apiUrl = import.meta.env.VITE_API_URL
 
 const isModalOpen = ref(false)
 
@@ -113,13 +112,12 @@ const loadTransactions = async () => {
 
 async function fetchBalance() {
   try {
-    const response = await fetch(`${apiUrl}/getBalance`, {
+    const response = await apiFetch('/getBalance', {
       method: 'GET',
-      credentials: 'include',
     })
 
     if (!response.ok) {
-      throw new Error('Failed to fetch balance')
+      throw new Error(await readErrorMessage(response, 'Failed to fetch balance'))
     }
 
     const data = await response.json()

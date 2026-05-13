@@ -3,6 +3,7 @@
     <section class="verify-card">
       <p class="eyebrow">Email verification</p>
       <h1>{{ title }}</h1>
+      <LoadingSpinner v-if="isLoading" centered label="Verifying your email..." />
       <p class="message">{{ message }}</p>
 
       <div class="actions">
@@ -14,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { verifyEmail } from '@/components/services/authService'

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { apiFetch } from '@/utils/apiClient'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
@@ -11,8 +12,6 @@ import SettingsView from '@/views/SettingsView.vue'
 import VerifyEmailView from '@/views/VerifyEmailView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import ResetPasswordView from '@/views/ResetPasswordView.vue'
-
-const apiUrl = import.meta.env.VITE_API_URL
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -88,9 +87,7 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAuth) {
     try {
-      const res = await fetch(`${apiUrl}/me`, {
-        credentials: 'include',
-      })
+      const res = await apiFetch('/me', { method: 'GET' }, { skipLoader: true })
 
       if (res.ok) {
         next()

@@ -32,7 +32,8 @@
         <p v-if="successMessage" class="feedback success">{{ successMessage }}</p>
 
         <button class="btn primary" type="submit" :disabled="isSubmitting || !token">
-          {{ isSubmitting ? 'Resetting...' : 'Reset password' }}
+          <LoadingSpinner v-if="isSubmitting" size="sm" label="Resetting..." />
+          <span v-else>Reset password</span>
         </button>
       </form>
 
@@ -45,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { resetPassword } from '@/components/services/authService'

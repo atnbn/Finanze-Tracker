@@ -1,6 +1,5 @@
-const apiUrl = import.meta.env.VITE_API_URL
-
 import type { ExpenseCategory } from './transactionService'
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
 
 type BudgetApiItem = {
   id: number
@@ -39,13 +38,12 @@ export async function fetchCurrentMonthBudgets(): Promise<{
   month: number
   year: number
 }> {
-  const res = await fetch(`${apiUrl}/budgets/current-month`, {
+  const res = await apiFetch('/budgets/current-month', {
     method: 'GET',
-    credentials: 'include',
   })
 
   if (!res.ok) {
-    throw new Error('Failed to fetch budgets')
+    throw new Error(await readErrorMessage(res, 'Failed to fetch budgets'))
   }
 
   const data: { budgets: BudgetApiItem[]; month: number; year: number } = await res.json()
@@ -58,15 +56,14 @@ export async function fetchCurrentMonthBudgets(): Promise<{
 }
 
 export async function saveBudget(payload: SaveBudgetPayload): Promise<Budget> {
-  const res = await fetch(`${apiUrl}/budgets`, {
+  const res = await apiFetch('/budgets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    credentials: 'include',
   })
 
   if (!res.ok) {
-    throw new Error('Failed to save budget')
+    throw new Error(await readErrorMessage(res, 'Failed to save budget'))
   }
 
   const data: { budget: BudgetApiItem } = await res.json()
@@ -78,13 +75,11 @@ export async function saveBudget(payload: SaveBudgetPayload): Promise<Budget> {
 }
 
 export async function deleteBudget(id: number): Promise<void> {
-  const res = await fetch(`${apiUrl}/budgets/${id}`, {
+  const res = await apiFetch(`/budgets/${id}`, {
     method: 'DELETE',
-    credentials: 'include',
   })
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null)
-    throw new Error(data?.error ?? 'Failed to delete budget')
+    throw new Error(await readErrorMessage(res, 'Failed to delete budget'))
   }
 }

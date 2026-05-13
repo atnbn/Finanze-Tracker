@@ -1,6 +1,5 @@
-const apiUrl = import.meta.env.VITE_API_URL
-
 import type { ExpenseCategory } from './transactionService'
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
 
 export type Currency = 'USD' | 'EUR' | 'CHF'
 export type Theme = 'light' | 'dark' | 'system'
@@ -51,13 +50,12 @@ export const createEmptySecuritySettings = (): SecuritySettings => ({
 })
 
 export async function fetchSettings(): Promise<UserSettings> {
-  const res = await fetch(`${apiUrl}/settings`, {
+  const res = await apiFetch('/settings', {
     method: 'GET',
-    credentials: 'include',
   })
 
   if (!res.ok) {
-    throw new Error('Failed to fetch settings')
+    throw new Error(await readErrorMessage(res, 'Failed to fetch settings'))
   }
 
   const data: SettingsApiResponse = await res.json()
@@ -65,10 +63,9 @@ export async function fetchSettings(): Promise<UserSettings> {
 }
 
 export async function updateSettings(payload: UpdateSettingsPayload): Promise<UserSettings> {
-  const res = await fetch(`${apiUrl}/settings`, {
+  const res = await apiFetch('/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(payload),
   })
 
@@ -82,10 +79,9 @@ export async function updateSettings(payload: UpdateSettingsPayload): Promise<Us
 }
 
 export async function deleteAccount(password: string): Promise<void> {
-  const res = await fetch(`${apiUrl}/settings/account`, {
+  const res = await apiFetch('/settings/account', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ password }),
   })
 
