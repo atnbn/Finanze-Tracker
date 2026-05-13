@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { signup } from './services/authService.ts'
 import { showToast } from '@/utils/toast'
 
@@ -288,7 +289,14 @@ focusCurrentInput()
         </button>
 
         <button type="submit" class="signup-btn" :disabled="isSubmitting">
-          {{ currentStep === 3 ? (isSubmitting ? 'Creating account...' : 'Sign Up') : 'Continue' }}
+          <LoadingSpinner
+            v-if="isSubmitting"
+            size="sm"
+            :label="currentStep === 3 ? 'Creating account...' : 'Loading...'"
+          />
+          <span v-else>
+            {{ currentStep === 3 ? 'Sign Up' : 'Continue' }}
+          </span>
         </button>
       </div>
 
@@ -474,6 +482,9 @@ focusCurrentInput()
 .signup-btn {
   background: #2563eb;
   color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .signup-btn:hover {

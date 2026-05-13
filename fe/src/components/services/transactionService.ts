@@ -1,4 +1,4 @@
-const apiUrl = import.meta.env.VITE_API_URL
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
 
 export type ExpenseCategory = 'food' | 'transport' | 'entertainment' | 'shopping' | 'other'
 export type IncomeCategory = 'salary' | 'freelance' | 'investment' | 'gift' | 'other'
@@ -22,79 +22,55 @@ export type CreateTransactionPayload = {
 export async function createTransaction(
   payload: CreateTransactionPayload,
 ): Promise<{ transaction: Transaction }> {
-  try {
-    const res = await fetch(`${apiUrl}/addTransaction`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include',
-    })
+  const res = await apiFetch('/addTransaction', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 
-    if (res.ok) {
-      return await res.json()
-    } else {
-      throw new Error('Failed to fetch transactions')
-    }
-  } catch (error) {
-    console.error(error)
-    throw error
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Failed to create transaction'))
   }
+
+  return res.json()
 }
 
 export async function fetchTransactions(): Promise<Transaction[]> {
-  try {
-    const res = await fetch(`${apiUrl}/getTransactions`, {
-      method: 'GET',
-      credentials: 'include',
-    })
+  const res = await apiFetch('/getTransactions', {
+    method: 'GET',
+  })
 
-    if (res.ok) {
-      const data: { transactions: Transaction[] } = await res.json()
-      return data.transactions
-    } else {
-      throw new Error('Failed to fetch transactions')
-    }
-  } catch (error) {
-    console.error(error)
-    throw error
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Failed to fetch transactions'))
   }
+
+  const data: { transactions: Transaction[] } = await res.json()
+  return data.transactions
 }
 
 export async function editTransaction(
   id: number,
   payload: CreateTransactionPayload,
 ): Promise<{ transaction: Transaction }> {
-  try {
-    const res = await fetch(`${apiUrl}/editTransaction/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include',
-    })
+  const res = await apiFetch(`/editTransaction/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 
-    if (res.ok) {
-      return await res.json()
-    } else {
-      throw new Error('Failed to edit transaction')
-    }
-  } catch (error) {
-    console.error(error)
-    throw error
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Failed to edit transaction'))
   }
+
+  return res.json()
 }
 
 export async function deleteTransaction(id: number): Promise<void> {
-  try {
-    const res = await fetch(`${apiUrl}/deleteTransaction/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    })
+  const res = await apiFetch(`/deleteTransaction/${id}`, {
+    method: 'DELETE',
+  })
 
-    if (!res.ok) {
-      throw new Error('Failed to delete transaction')
-    }
-  } catch (error) {
-    console.error(error)
-    throw error
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Failed to delete transaction'))
   }
 }

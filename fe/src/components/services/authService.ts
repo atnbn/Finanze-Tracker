@@ -1,5 +1,7 @@
 const apiUrl = import.meta.env.VITE_API_URL
 
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
+
 type SignupPayload = {
   username: string
   email: string
@@ -12,24 +14,21 @@ type LoginPayload = {
 }
 
 export async function signup(payload: SignupPayload): Promise<void> {
-  const res = await fetch(`${apiUrl}/signup`, {
+  const res = await apiFetch('/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    credentials: 'include',
   })
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null)
-    throw new Error(data?.error ?? 'Failed to sign up')
+    throw new Error(await readErrorMessage(res, 'Failed to sign up'))
   }
 }
 
 export async function verifyEmail(token: string): Promise<string> {
-  const res = await fetch(`${apiUrl}/verify-email`, {
+  const res = await apiFetch('/verify-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ token }),
   })
 
@@ -43,10 +42,9 @@ export async function verifyEmail(token: string): Promise<string> {
 }
 
 export async function requestPasswordReset(email: string): Promise<string> {
-  const res = await fetch(`${apiUrl}/forgot-password`, {
+  const res = await apiFetch('/forgot-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ email }),
   })
 
@@ -68,10 +66,9 @@ type ResetPasswordPayload = {
 }
 
 export async function resetPassword(payload: ResetPasswordPayload): Promise<string> {
-  const res = await fetch(`${apiUrl}/reset-password`, {
+  const res = await apiFetch('/reset-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(payload),
   })
 

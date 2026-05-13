@@ -18,9 +18,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch } from '@/utils/apiClient'
 import { clearStoredUserPreferences } from '@/utils/appPreferences'
-
-const apiUrl = import.meta.env.VITE_API_URL
 
 const router = useRouter()
 defineProps<{
@@ -36,9 +35,8 @@ const logout = async () => {
   clearStoredUserPreferences()
 
   try {
-    await fetch(`${apiUrl}/logout`, {
+    await apiFetch('/logout', {
       method: 'POST',
-      credentials: 'include',
     })
   } catch (error) {
     console.error('Logout failed:', error)

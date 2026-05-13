@@ -19,7 +19,10 @@
         <RouterLink to="/forgot-password">Forgot password?</RouterLink>
       </div>
 
-      <button type="submit" class="login-btn">LOGIN</button>
+      <button type="submit" class="login-btn" :disabled="isSubmitting">
+        <LoadingSpinner v-if="isSubmitting" size="sm" label="Logging in..." />
+        <span v-else>LOGIN</span>
+      </button>
 
       <div class="footer">Don't have an account? <a href="/signup">Sign Up</a></div>
     </form>
@@ -27,14 +30,14 @@
 </template>
 
 <script setup lang="ts">
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import { fetchSettings } from '@/components/services/settingsService'
 import router from '@/router'
+import { apiFetch, readErrorMessage } from '@/utils/apiClient'
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchSettings } from '@/components/services/settingsService'
 import { applyTheme, getPreferredStartRoute, storeUserPreferences } from '@/utils/appPreferences'
 import { showToast } from '@/utils/toast'
-
-const apiUrl = import.meta.env.VITE_API_URL
 
 const REMEMBER_ME_KEY = 'rememberMe'
 const REMEMBERED_USERNAME_KEY = 'username'
@@ -42,6 +45,7 @@ const REMEMBERED_USERNAME_KEY = 'username'
 const username = ref('')
 const password = ref('')
 const rememberMe = ref(false)
+const isSubmitting = ref(false)
 
 onMounted(() => {
   rememberMe.value = localStorage.getItem(REMEMBER_ME_KEY) === 'true'
@@ -51,62 +55,62 @@ onMounted(() => {
   }
 })
 
-function handleLogin(): void {
-  fetch(`${apiUrl}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({
-      email: username.value,
-      password: password.value,
-      rememberMe: rememberMe.value,
-    }),
-  })
-    .then(async (res) => {
-      const data = await res.json().catch(() => null)
+async function handleLogin(): Promise<void> {
+  isSubmitting.value = true
 
-      if (!res.ok) {
-        throw new Error(data?.error ?? 'Login failed')
-      }
-
-      return data
+  try {
+    const res = await apiFetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: username.value,
+        password: password.value,
+        rememberMe: rememberMe.value,
+      }),
     })
-    .then(async (data) => {
-      if (data.success) {
-        try {
-          const settings = await fetchSettings()
-          storeUserPreferences(settings)
-          applyTheme(settings.preferences.theme)
-          if (rememberMe.value) {
-            localStorage.setItem(REMEMBER_ME_KEY, 'true')
-            localStorage.setItem(REMEMBERED_USERNAME_KEY, username.value)
-          } else {
-            localStorage.removeItem(REMEMBER_ME_KEY)
-            localStorage.removeItem(REMEMBERED_USERNAME_KEY)
-          }
 
-          password.value = ''
-        } catch (error) {
-          console.error('Failed to preload settings:', error)
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, 'Login failed'))
+    }
+
+    const data = await res.json().catch(() => null)
+
+    if (data?.success) {
+      try {
+        const settings = await fetchSettings()
+        storeUserPreferences(settings)
+        applyTheme(settings.preferences.theme)
+        if (rememberMe.value) {
+          localStorage.setItem(REMEMBER_ME_KEY, 'true')
+          localStorage.setItem(REMEMBERED_USERNAME_KEY, username.value)
+        } else {
+          localStorage.removeItem(REMEMBER_ME_KEY)
+          localStorage.removeItem(REMEMBERED_USERNAME_KEY)
         }
 
-        showToast({
-          type: 'success',
-          title: 'Login successful',
-          message: 'Welcome back.',
-        })
-        router.push(getPreferredStartRoute())
+        password.value = ''
+      } catch (error) {
+        console.error('Failed to preload settings:', error)
       }
-    })
-    .catch((err) => {
-      console.error('Login error:', err)
-      password.value = ''
+
       showToast({
-        type: 'error',
-        title: 'Login failed',
-        message: err instanceof Error ? err.message : 'An error occurred during login.',
+        type: 'success',
+        title: 'Login successful',
+        message: 'Welcome back.',
       })
+      await router.push(getPreferredStartRoute())
+    }
+  } catch (err) {
+    console.error('Login error:', err)
+    password.value = ''
+    showToast({
+      type: 'error',
+      title: 'Login failed',
+      message: err instanceof Error ? err.message : 'An error occurred during login.',
     })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -221,6 +225,9 @@ function handleLogin(): void {
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: 0.2s;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .login-btn:hover {
@@ -229,6 +236,11 @@ function handleLogin(): void {
 
 .login-btn:active {
   transform: scale(0.98);
+}
+
+.login-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 /* ========== FOOTER ========== */
