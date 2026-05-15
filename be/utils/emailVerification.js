@@ -3,6 +3,14 @@ import nodemailer from "nodemailer";
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
+function debugEmailLog(message, details = {}) {
+  if (process.env.DEBUG_AUTH_FLOW !== "true") {
+    return;
+  }
+
+  console.log(`[email-verification] ${message}`, details);
+}
+
 export function hashEmailVerificationToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
@@ -38,6 +46,9 @@ function createTransport() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
     secure: Number(process.env.SMTP_PORT) === 465,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -47,6 +58,14 @@ function createTransport() {
 
 export async function sendVerificationEmail({ email, displayName, token }) {
   const verificationUrl = getVerificationUrl(token);
+
+  debugEmailLog("prepare verification email", {
+    email,
+    hasSmtpConfiguration: hasSmtpConfiguration(),
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    from: process.env.SMTP_FROM,
+  });
 
   if (!hasSmtpConfiguration()) {
     console.info(`Email verification link for ${email}: ${verificationUrl}`);
@@ -58,34 +77,46 @@ export async function sendVerificationEmail({ email, displayName, token }) {
   const from = process.env.SMTP_FROM || `${appName} <no-reply@fintrack.local>`;
   const greetingName = displayName || email;
 
-  await transporter.sendMail({
-    from,
-    to: email,
-    subject: `Verify your ${appName} account`,
-    text: [
-      `Hello ${greetingName},`,
-      "",
-      "Please verify your email address by opening this link:",
-      verificationUrl,
-      "",
-      "This link expires in 24 hours.",
-    ].join("\n"),
-    html: `
-      <p>Hello ${greetingName},</p>
-      <p>Please verify your email address by clicking the button below:</p>
-      <p>
-        <a
-          href="${verificationUrl}"
-          style="display:inline-block;padding:12px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;"
-        >
-          Verify email
-        </a>
-      </p>
-      <p>If the button does not work, copy and paste this URL into your browser:</p>
-      <p>${verificationUrl}</p>
-      <p>This link expires in 24 hours.</p>
-    `,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: email,
+      subject: `Verify your ${appName} account`,
+      text: [
+        `Hello ${greetingName},`,
+        "",
+        "Please verify your email address by opening this link:",
+        verificationUrl,
+        "",
+        "This link expires in 24 hours.",
+      ].join("\n"),
+      html: `
+        <p>Hello ${greetingName},</p>
+        <p>Please verify your email address by clicking the button below:</p>
+        <p>
+          <a
+            href="${verificationUrl}"
+            style="display:inline-block;padding:12px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;"
+          >
+            Verify email
+          </a>
+        </p>
+        <p>If the button does not work, copy and paste this URL into your browser:</p>
+        <p>${verificationUrl}</p>
+        <p>This link expires in 24 hours.</p>
+      `,
+    });
+
+    debugEmailLog("verification email sent", { email });
+  } catch (error) {
+    debugEmailLog("verification email failed", {
+      email,
+      message: error?.message,
+      code: error?.code,
+      command: error?.command,
+    });
+    throw error;
+  }
 
   return { previewUrl: verificationUrl, delivered: true };
 }

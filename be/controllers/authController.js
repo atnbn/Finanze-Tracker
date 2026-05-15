@@ -20,6 +20,14 @@ const PASSWORD_MIN_LENGTH = 8;
 const GENERIC_PASSWORD_RESET_MESSAGE =
   "If an account with that email exists, a password reset link has been sent.";
 
+function debugAuthLog(message, details = {}) {
+  if (process.env.DEBUG_AUTH_FLOW !== "true") {
+    return;
+  }
+
+  console.log(`[auth] ${message}`, details);
+}
+
 function normalizeEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : value;
 }
@@ -56,6 +64,11 @@ export async function createUser(req, res) {
         .json({ error: "Invalid email format", type: typeof email });
     }
 
+    debugAuthLog("signup request received", {
+      email,
+      hasUsername: Boolean(username),
+    });
+
     const existing = await pool.query("SELECT 1 FROM users WHERE email = $1", [
       email,
     ]);
@@ -80,6 +93,11 @@ export async function createUser(req, res) {
       [email, hashedPassword, tokenHash, expiresAt],
     );
 
+    debugAuthLog("user inserted", {
+      userId: result.rows[0].id,
+      email: result.rows[0].email,
+    });
+
     if (username) {
       await client.query(
         `INSERT INTO user_settings (user_id, display_name)
@@ -90,7 +108,16 @@ export async function createUser(req, res) {
            updated_at = NOW()`,
         [result.rows[0].id, username],
       );
+
+      debugAuthLog("user settings upserted", {
+        userId: result.rows[0].id,
+      });
     }
+
+    debugAuthLog("sending verification email", {
+      userId: result.rows[0].id,
+      email,
+    });
 
     await sendVerificationEmail({
       email,
@@ -98,7 +125,16 @@ export async function createUser(req, res) {
       token,
     });
 
+    debugAuthLog("verification email finished", {
+      userId: result.rows[0].id,
+      email,
+    });
+
     await client.query("COMMIT");
+
+    debugAuthLog("signup committed", {
+      userId: result.rows[0].id,
+    });
 
     return res.status(201).json({
       user: result.rows[0],
@@ -107,6 +143,11 @@ export async function createUser(req, res) {
     });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => null);
+    debugAuthLog("signup failed", {
+      message: err?.message,
+      code: err?.code,
+      stack: process.env.DEBUG_AUTH_FLOW === "true" ? err?.stack : undefined,
+    });
     console.error(err);
     return res.status(500).json({ error: "Failed to create user" });
   } finally {
